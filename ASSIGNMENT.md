@@ -1,123 +1,217 @@
 # Assignment
 
-This file holds the current milestone from [ROADMAP.md](ROADMAP.md),
-split into checkpoints.
+The current part of [ROADMAP.md](ROADMAP.md), split into checkpoints you
+build one at a time.
 
 ## How it works
 
-1. Do the tasks of one checkpoint.
-2. Write your answers in the notes file for the milestone, under the
-   matching question number (for example `Q0.1.2`).
-3. Tick the checkpoint's box below and ask for a review: "check 0.1".
-4. The review goes into the checkpoint's **Review** line:
+1. Build the checkpoint until everything under **Done when** is true.
+2. Tick its box and ask for a review: "check 1.2".
+3. The review goes on the checkpoint's **Review** line:
    - **Passed**: go on to the next checkpoint.
-   - **Revise**: there are follow-up questions for you to answer in your
-     notes. Answer them, then ask for a review again.
-5. When every checkpoint is passed, the milestone moves to **Completed**
-   at the bottom and the next one takes its place.
-
-Write answers in your own words. "I don't know, I tried X and saw Y" is a
-valid answer and a better one than a guess.
+   - **Revise**: the line says what doesn't meet **Done when** yet. You
+     get hints, not fixes.
+4. **Hints** are links and pointers for when you're stuck. Try without
+   them first.
+5. **Think about later** questions are optional. Park your thoughts in
+   [notes/questions.md](notes/questions.md) if you like; we'll discuss
+   them once the slice works.
 
 ---
 
-## Milestone 0: get to know the stack
+## Slice 1: Catalog
 
-**Goal:** understand how the empty project works before changing it.
-**Notes file:** [notes/milestone-0.md](notes/milestone-0.md)
+**Goal:** a librarian can add a book through the API and read it back,
+built in hexagonal layers from the domain outwards.
 
-### Checkpoint 0.1: start the project
+The rules for this slice:
+- A book has an ISBN, a title and one or more authors.
+- An ISBN is a valid ISBN-13: 13 digits, starting with 978 or 979, with a
+  correct check digit. Hyphens and spaces in the input are allowed and
+  ignored.
+- The title can't be empty.
+- Two books can't have the same ISBN.
+
+### Checkpoint 1.0: warm up
 
 - [ ] Done
 
-Tasks:
-- Run `make help` and read the list of commands.
-- Run `make up`, then `docker compose ps`.
-- Open http://localhost:8080/api.
-- Run `make sh` to open a shell in the PHP container, then run
-  `bin/console` with no arguments.
+Build:
+- Start the stack with `make up` and open http://localhost:8080/api.
+- Open a shell with `make sh` and run `bin/console`, `make test`.
 
-Questions:
-- **Q0.1.1** What does each of the three containers do?
-- **Q0.1.2** Which container receives your browser's request first, and
-  which one runs the PHP?
-- **Q0.1.3** In `compose.yaml` and `.env`, the PHP container reaches MySQL
-  through the hostname `database`. Why can't it use `localhost`?
+Done when:
+- You see the API docs page and `make test` runs (with no tests yet).
 
 Review: _not submitted_
 
-### Checkpoint 0.2: follow a request
+### Checkpoint 1.1: folder structure
 
 - [ ] Done
 
-Tasks:
-- Read, in this order: `docker/nginx/default.conf`, `public/index.php`,
-  `src/Kernel.php`.
-- Inside the container, run `bin/console debug:router`.
+Build:
+- Delete the default folders Symfony created in `src/` (`Entity`,
+  `Repository`, `ApiResource`, `Controller`).
+- Create a `Catalog` folder in `src/` with one folder per hexagonal
+  layer. You choose the names and how deep it goes.
+- Point Doctrine and API Platform at your new structure instead of the
+  deleted folders.
+- Create `tests/Unit`, `tests/Integration` and `tests/Functional`.
 
-Questions:
-- **Q0.2.1** How does nginx decide whether a URL goes to PHP?
-- **Q0.2.2** What does `public/index.php` do?
-- **Q0.2.3** Which routes exist although you wrote no controllers, and
-  where do they come from?
+Done when:
+- `bin/console cache:clear` and `bin/console debug:container` run without
+  errors.
+- http://localhost:8080/api still loads.
+- No configuration file mentions the deleted folders.
+
+Hints:
+- `config/services.yaml`, `config/packages/doctrine.yaml`,
+  `config/packages/api_platform.yaml`
+- https://api-platform.com/docs/core/getting-started/
+
+Think about later:
+- Why does each layer exist, and which layer may use which?
 
 Review: _not submitted_
 
-### Checkpoint 0.3: how Symfony discovers classes
+### Checkpoint 1.2: the ISBN value object
 
 - [ ] Done
 
-Tasks:
-- Read `config/services.yaml`, including the comments.
-- Read the "Service Container" page of the Symfony documentation.
-- Experiment: create a small, empty class anywhere in `src/`, run
-  `bin/console debug:container` and search for it. Then delete the class.
+Build:
+- A class in your domain layer that represents an ISBN and enforces the
+  rules above.
+- Unit tests in `tests/Unit` for valid ISBNs, invalid ones (wrong length,
+  wrong prefix, wrong check digit, letters) and input with hyphens.
 
-Questions:
-- **Q0.3.1** Which folder does Symfony scan to register services?
-- **Q0.3.2** What do `autowire` and `autoconfigure` mean?
-- **Q0.3.3** Did your empty class show up as a service? Explain why or why
-  not.
+Done when:
+- `make test` passes.
+- Creating an invalid ISBN is impossible: it fails with your own domain
+  exception, not a generic one.
+- Two ISBN objects with the same digits count as equal.
+- The class imports nothing from `Symfony\` or `Doctrine\`.
+
+Hints:
+- Look up how the ISBN-13 check digit is calculated (weights 1 and 3).
+- https://docs.phpunit.de/en/12.0/writing-tests-for-phpunit.html, see
+  data providers.
+
+Think about later:
+- Is this an entity or a value object, and what makes the difference?
 
 Review: _not submitted_
 
-### Checkpoint 0.4: where Doctrine and API Platform look
+### Checkpoint 1.3: the Book entity
 
 - [ ] Done
 
-Tasks:
-- Read `config/packages/doctrine.yaml` and
-  `config/packages/api_platform.yaml`.
-- Find `DATABASE_URL` in `.env`.
-- Inside the container, run `bin/console dbal:run-sql "SELECT VERSION()"`.
+Build:
+- A `Book` in your domain layer with an id, an ISBN, a title and authors.
+- Decide how a book gets its id (hint: think about who generates it, and
+  when).
+- Unit tests for creating a book and for the title and author rules.
 
-Questions:
-- **Q0.4.1** In which folder does Doctrine look for entities, and in which
-  format does it expect the mapping?
-- **Q0.4.2** In which folder does API Platform look for resources?
-- **Q0.4.3** What MySQL version did the query return?
-- **Q0.4.4** Why is `.env` committed to git while `.env.local` is not?
+Done when:
+- `make test` passes.
+- You can't create a book in an invalid state.
+- Still no `Symfony\` or `Doctrine\` imports in the domain.
+
+Hints:
+- `composer require symfony/uid` gives you UUIDs. Is it fine to use that
+  in the domain? Decide, and be ready to defend it.
+
+Think about later:
+- Should authors be plain strings or their own concept?
 
 Review: _not submitted_
 
-### Checkpoint 0.5: reflect
+### Checkpoint 1.4: repository port and the "add book" use case
 
 - [ ] Done
 
-Tasks:
-- Re-read "Rules for the codebase" in [ROADMAP.md](ROADMAP.md).
-- Draw the layers of a hexagonal application and the direction of the
-  dependencies. A photo of a paper sketch in `notes/` is fine, or describe
-  it in text.
+Build:
+- A repository interface (a port) for books, in the layer you think it
+  belongs to.
+- An in-memory implementation of it, for tests.
+- An application-layer use case that adds a book to the catalog, and
+  rejects a duplicate ISBN.
+- Unit tests for the use case that use the in-memory repository.
 
-Questions:
-- **Q0.5.1** Describe your sketch: which layers, and which depends on
-  which?
-- **Q0.5.2** For each folder Symfony created in `src/`, does it fit your
-  sketch, and if so in which layer? Give your reasoning.
-- **Q0.5.3** Name at least one way Doctrine's default configuration
-  conflicts with "the domain does not know Doctrine exists". Only the
-  problem, no solution yet.
+Done when:
+- `make test` passes, without a database or the Symfony kernel.
+- Adding a book with an ISBN that already exists fails with a domain or
+  application exception.
+
+Hints:
+- Search for "command handler" and "use case interactor".
+
+Think about later:
+- Where does the in-memory repository live: `src/` or `tests/`? Why?
+
+Review: _not submitted_
+
+### Checkpoint 1.5: Doctrine adapter
+
+- [ ] Done
+
+Build:
+- A Doctrine implementation of your repository port, in the
+  infrastructure layer.
+- Doctrine mapping for `Book` that keeps the domain class free of Doctrine
+  attributes.
+- A way to store your ISBN value object in a column.
+- A migration, applied with `make db`.
+- An integration test in `tests/Integration` that saves a book and loads
+  it again from `library_test`.
+
+Done when:
+- `make db` creates the `book` table.
+- `bin/console doctrine:schema:validate` reports no errors.
+- `make test` passes, including the integration test.
+- The domain still has no Doctrine imports.
+
+Hints:
+- https://www.doctrine-project.org/projects/doctrine-orm/en/current/reference/xml-mapping.html
+- Doctrine embeddables, or custom DBAL types.
+- https://symfony.com/doc/current/testing.html, see "Integration Tests".
+- Run `bin/console doctrine:database:create --env=test` and the schema
+  for the test database yourself first.
+
+Review: _not submitted_
+
+### Checkpoint 1.6: API Platform adapter
+
+- [ ] Done
+
+Build:
+- `POST /api/books` that adds a book through your use case.
+- `GET /api/books/{id}` that returns it.
+- The API works with its own classes (DTOs), not with your domain `Book`.
+- Errors map to sensible HTTP codes: invalid input → 422, duplicate ISBN
+  → 409, unknown id → 404.
+- Functional tests in `tests/Functional` for each of those cases.
+
+Done when:
+- These work from your terminal:
+  ```sh
+  curl -X POST http://localhost:8080/api/books \
+    -H 'Content-Type: application/ld+json' \
+    -d '{"isbn":"978-0-13-235088-4","title":"Clean Code","authors":["Robert C. Martin"]}'
+  curl http://localhost:8080/api/books/<id from the response>
+  ```
+- Posting the same ISBN twice gives a 409.
+- `make test` passes.
+
+Hints:
+- https://api-platform.com/docs/core/dto/
+- https://api-platform.com/docs/core/state-processors/
+- https://api-platform.com/docs/core/state-providers/
+- https://api-platform.com/docs/core/errors/
+- https://api-platform.com/docs/core/testing/
+
+Think about later:
+- If you replaced API Platform with a CLI command, which files would you
+  have to change?
 
 Review: _not submitted_
 
