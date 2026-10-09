@@ -94,7 +94,7 @@ Build:
 Done when:
 - `bin/console cache:clear` and `bin/console debug:container` run without
   errors.
-- `composer dump-autoload --strict-psr` gives no warnings.
+- `composer dump-autoload --optimize --strict-psr` gives no warnings.
 - http://localhost:8080/api still loads.
 - No configuration file mentions the deleted folders.
 - `git status` shows the new folders.
