@@ -137,7 +137,16 @@ Hints:
 Think about later:
 - Is this an entity or a value object, and what makes the difference?
 
-Review: _not submitted_
+Review: **Revise.** Good start on the shape. Still missing:
+  - `new isbn("abc")` still creates an object: the constructor never
+    refuses bad input. What does `return` do inside a constructor?
+  - No domain exception in `Domain/Exception`, and no unit tests yet.
+  - Rules not enforced yet: 13 digits, hyphens and spaces ignored,
+    978/979 prefix, check digit.
+  - Equality: no way yet to ask if two ISBNs are the same.
+  - Can the value change after construction? Look at `readonly`.
+  - Naming: PSR-1 class naming for `isbn` and the file name; return type
+    on `getDigits()`.
 
 ### Checkpoint 1.3: the Book entity
 
