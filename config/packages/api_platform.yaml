@@ -1,6 +1,9 @@
 api_platform:
-    title: Hello API Platform
+    title: Library Lending API
     version: 1.0.0
+    mapping:
+        paths:
+            - '%kernel.project_dir%/src/Catalog/Infrastructure/Framework/ApiPlatform/ApiResource'
     defaults:
         stateless: true
         cache_headers:
