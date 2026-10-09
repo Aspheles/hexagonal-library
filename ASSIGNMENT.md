@@ -78,7 +78,7 @@ Review: _not submitted_
 
 ### Checkpoint 1.1: folder structure
 
-- [ ] Done
+- [x] Done
 
 Build:
 - Delete the default folders Symfony created in `src/` (`Entity`,
@@ -109,7 +109,7 @@ Think about later:
 - Why does each layer exist, and which layer may use which?
 - Why are there DTOs in both `Application` and `Infrastructure`?
 
-Review: _not submitted_
+Review: **Passed.** Config was wired up together; all checks run clean.
 
 ### Checkpoint 1.2: the ISBN value object
 
