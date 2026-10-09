@@ -32,6 +32,37 @@ The rules for this slice:
 - The title can't be empty.
 - Two books can't have the same ISBN.
 
+### Where things go
+
+The structure follows the layout used at work. Every bounded context
+(`Catalog` now, `Lending` later) has the same tree. Paths below are
+relative to `src/Catalog/`.
+
+| Folder | What goes in it |
+| --- | --- |
+| `Domain/Model` | Entities and aggregates (`Book`) |
+| `Domain/ValueObject` | Value objects (`Isbn`) |
+| `Domain/Exception` | Exceptions for broken business rules |
+| `Domain/Repository` | Repository interfaces (ports) |
+| `Domain/Service` | Domain logic that doesn't belong to one entity |
+| `Domain/Enum` | Enums that are part of the business language |
+| `Application/Command` | Write use cases: command + handler |
+| `Application/Query` | Read use cases: query + handler |
+| `Application/Dto` | What use cases return to the outside |
+| `Application/Service` | Application services shared by use cases |
+| `Application/Transformer` | Domain → application DTO conversion |
+| `Infrastructure/Repository` | Doctrine implementations of the ports |
+| `Infrastructure/Resources` | Doctrine mapping files |
+| `Infrastructure/Framework/ApiPlatform/ApiResource` | API Platform resources |
+| `Infrastructure/Dto/Input`, `Dto/Output` | Request and response bodies of the API |
+| `Infrastructure/Transformer` | API DTO ↔ command/query/application DTO |
+| `Infrastructure/Exception` | Infrastructure errors, exception → HTTP mapping |
+| `Infrastructure/Port/Api` | Clients for external APIs (slice 4) |
+| `Infrastructure/Factory`, `Service`, `Enum/Event` | As at work, when needed |
+
+Tests mirror this tree: `tests/Unit/Catalog/Domain/...`, and so on.
+Fakes such as an in-memory repository go in `tests/Support/`.
+
 ### Checkpoint 1.0: warm up
 
 - [ ] Done
@@ -52,25 +83,31 @@ Review: _not submitted_
 Build:
 - Delete the default folders Symfony created in `src/` (`Entity`,
   `Repository`, `ApiResource`, `Controller`).
-- Create a `Catalog` folder in `src/` with one folder per hexagonal
-  layer. You choose the names and how deep it goes.
-- Point Doctrine and API Platform at your new structure instead of the
+- Create the `src/Catalog` tree from "Where things go".
+- Point Doctrine at `Infrastructure/Resources` and API Platform at
+  `Infrastructure/Framework/ApiPlatform/ApiResource` instead of the
   deleted folders.
-- Create `tests/Unit`, `tests/Integration` and `tests/Functional`.
+- Create `tests/Unit`, `tests/Integration`, `tests/Functional` and
+  `tests/Support`.
+- Make sure the empty folders end up in git.
 
 Done when:
 - `bin/console cache:clear` and `bin/console debug:container` run without
   errors.
+- `composer dump-autoload --strict-psr` gives no warnings.
 - http://localhost:8080/api still loads.
 - No configuration file mentions the deleted folders.
+- `git status` shows the new folders.
 
 Hints:
 - `config/services.yaml`, `config/packages/doctrine.yaml`,
   `config/packages/api_platform.yaml`
 - https://api-platform.com/docs/core/getting-started/
+- Git doesn't track empty folders. Look up `.gitkeep`.
 
 Think about later:
 - Why does each layer exist, and which layer may use which?
+- Why are there DTOs in both `Application` and `Infrastructure`?
 
 Review: _not submitted_
 
@@ -79,9 +116,10 @@ Review: _not submitted_
 - [ ] Done
 
 Build:
-- A class in your domain layer that represents an ISBN and enforces the
-  rules above.
-- Unit tests in `tests/Unit` for valid ISBNs, invalid ones (wrong length,
+- An `Isbn` in `Domain/ValueObject` that enforces the rules above, with
+  its exception in `Domain/Exception`.
+- Unit tests in `tests/Unit/Catalog/Domain/ValueObject` for valid ISBNs,
+  invalid ones (wrong length,
   wrong prefix, wrong check digit, letters) and input with hyphens.
 
 Done when:
@@ -106,7 +144,7 @@ Review: _not submitted_
 - [ ] Done
 
 Build:
-- A `Book` in your domain layer with an id, an ISBN, a title and authors.
+- A `Book` in `Domain/Model` with an id, an ISBN, a title and authors.
 - Decide how a book gets its id (hint: think about who generates it, and
   when).
 - Unit tests for creating a book and for the title and author rules.
@@ -130,23 +168,24 @@ Review: _not submitted_
 - [ ] Done
 
 Build:
-- A repository interface (a port) for books, in the layer you think it
-  belongs to.
-- An in-memory implementation of it, for tests.
-- An application-layer use case that adds a book to the catalog, and
-  rejects a duplicate ISBN.
-- Unit tests for the use case that use the in-memory repository.
+- A book repository interface (the port) in `Domain/Repository`.
+- An in-memory implementation of it in `tests/Support`.
+- An `AddBook` command and its handler in `Application/Command`. The
+  handler adds a book to the catalog and rejects a duplicate ISBN.
+- Unit tests for the handler that use the in-memory repository.
 
 Done when:
 - `make test` passes, without a database or the Symfony kernel.
-- Adding a book with an ISBN that already exists fails with a domain or
-  application exception.
+- Adding a book with an ISBN that already exists fails with an exception
+  from `Domain/Exception`.
 
 Hints:
 - Search for "command handler" and "use case interactor".
+- Should the handler return the new book, its id, or nothing?
 
 Think about later:
-- Where does the in-memory repository live: `src/` or `tests/`? Why?
+- Why is the repository interface in `Domain` and its Doctrine version in
+  `Infrastructure`, and not both in the same place?
 
 Review: _not submitted_
 
@@ -155,10 +194,10 @@ Review: _not submitted_
 - [ ] Done
 
 Build:
-- A Doctrine implementation of your repository port, in the
-  infrastructure layer.
-- Doctrine mapping for `Book` that keeps the domain class free of Doctrine
-  attributes.
+- A Doctrine implementation of your repository port in
+  `Infrastructure/Repository`.
+- XML mapping for `Book` in `Infrastructure/Resources`, so the domain
+  class stays free of Doctrine attributes.
 - A way to store your ISBN value object in a column.
 - A migration, applied with `make db`.
 - An integration test in `tests/Integration` that saves a book and loads
@@ -185,8 +224,15 @@ Review: _not submitted_
 
 Build:
 - `POST /api/books` that adds a book through your use case.
-- `GET /api/books/{id}` that returns it.
-- The API works with its own classes (DTOs), not with your domain `Book`.
+- `GET /api/books/{id}` that returns it, through a `GetBook` query and
+  handler in `Application/Query`.
+- The resource in `Framework/ApiPlatform/ApiResource` uses the DTOs from
+  `Infrastructure/Dto/Input` and `Dto/Output`, never your domain `Book`.
+- Transformers turn API DTOs into commands and queries, and results back
+  into output DTOs.
+- A state processor (for POST) and a state provider (for GET) that call
+  the handlers. There's no folder for them yet; pick one under
+  `Framework/ApiPlatform` and be ready to explain why.
 - Errors map to sensible HTTP codes: invalid input → 422, duplicate ISBN
   → 409, unknown id → 404.
 - Functional tests in `tests/Functional` for each of those cases.
